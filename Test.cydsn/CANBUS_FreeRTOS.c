@@ -45,6 +45,8 @@ CY_ISR(ISR_CAN){
     
     xHigherPriorityTaskWoken = pdFALSE;
     
+    CAN_INT_SR_REG.byte[1u] = CAN_RX_MESSAGE_MASK;
+    
     xSemaphoreGiveFromISR(xCanRxBinarySemaphor, &xHigherPriorityTaskWoken);
     
     portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
@@ -52,7 +54,7 @@ CY_ISR(ISR_CAN){
 
 static void vCanBusSetup(){
     //割り込みの割り当て
-    CyIntSetVector(CAN_ISR_NUMBER, ISR_CAN);
+    //CyIntSetVector(CAN_ISR_NUMBER, ISR_CAN);
     
     //Txバッファ用のキュー初期化
     xCanTxFifoQue = xQueueCreate(4,sizeof(CAN_TX_MSG));
@@ -68,8 +70,8 @@ static void vCanBusSetup(){
     xSemaphoreGive(xCanTxBinarySemaphor);
     //xSemaphoreGive(xCanRxBinarySemaphor);
     
-    xTaskCreate(vCanBusRxTask,"CAN_RX",100,NULL,3,NULL);
-    
+    xTaskCreate(vCanBusRxTask,"CAN_RX",200,NULL,3,NULL);
+    CyIntSetVector(CAN_ISR_NUMBER, ISR_CAN);
 }
 
 static void vCanBusRxTask(){
@@ -85,11 +87,11 @@ static void vCanBusRxTask(){
             if((canRxBufReg & CAN_RX_MAILBOX_SHIFT(mailboxNum)) != 0){
                 for(uint8_t byteNum=0;byteNum<8;byteNum++){
                     canDataBuf[byteNum] = CAN_RX_DATA_BYTE(mailboxNum,byteNum);
-                    xQueueSendToBack(xCanRxFifoQue[mailboxNum],canDataBuf,portMAX_DELAY);
-                    
-                    //ACK送信
-                    CAN_RX_ACK_MESSAGE(mailboxNum);
                 }
+                xQueueSendToBack(xCanRxFifoQue[mailboxNum],canDataBuf,portMAX_DELAY);
+                    
+                //ACK送信
+                CAN_RX_ACK_MESSAGE(mailboxNum);
             }
         }
     }

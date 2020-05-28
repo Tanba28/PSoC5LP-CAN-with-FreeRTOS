@@ -22,7 +22,7 @@
 
 void vFreeRTOSSetup();
 
-void vUartEchoBackTask();
+void vEchoBackTask();
 volatile uint32_t temp;
 
 
@@ -34,10 +34,9 @@ int main(void)
     vFreeRTOSSetup();
     vUSBUARTStart();
     vCanBusStart();
-    
-    xTaskCreate(vUartEchoBackTask,"test4",1000,NULL,3,NULL);//Echo back test task
+    vCanBusEnable();
+    xTaskCreate(vEchoBackTask,"test4",1000,NULL,3,NULL);//Echo back test task
 
-    CAN_Start();
     //CyIntSetVector(CAN_ISR_NUMBER, ISR_CAN);    
     
     vTaskStartScheduler();
@@ -60,13 +59,14 @@ void vFreeRTOSSetup(){
     CyRamVectors[ 15 ] = ( cyisraddress ) xPortSysTickHandler;
 }
 
-void vUartEchoBackTask(){
+void vEchoBackTask(){
     uint8_t buf[8];    
-    
+    char debug[128];
     for(;;){      
         LED_0_Write(~LED_0_Read());
         vCanBusRead(0,buf);
-        vUSBUARTPutString((char*)buf,8);
+        sprintf(debug,"%x %x %x\r\n",buf[0],buf[1],buf[2]);
+        vUSBUARTPutString(debug,strlen(debug));
         
     }    
 }
