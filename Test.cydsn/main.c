@@ -18,10 +18,13 @@
 #include "task.h"
 
 #include "USBUART_FreeRTOS.h"
+#include "CANBUS_FreeRTOS.h"
 
 void vFreeRTOSSetup();
 
 void vUartEchoBackTask();
+volatile uint32_t temp;
+
 
 int main(void)
 {
@@ -30,14 +33,19 @@ int main(void)
     /* Place your initialization/startup code here (e.g. MyInst_Start()) */
     vFreeRTOSSetup();
     vUSBUARTStart();
+    vCanBusStart();
     
     xTaskCreate(vUartEchoBackTask,"test4",1000,NULL,3,NULL);//Echo back test task
+
+    CAN_Start();
+    //CyIntSetVector(CAN_ISR_NUMBER, ISR_CAN);    
     
     vTaskStartScheduler();
-    
+
     for(;;)
     {
         /* Place your application code here. */
+        
     }
 }
 
@@ -53,13 +61,13 @@ void vFreeRTOSSetup(){
 }
 
 void vUartEchoBackTask(){
-    char buf;    
+    uint8_t buf[8];    
     
     for(;;){      
         LED_0_Write(~LED_0_Read());
-        vUSBUARTGetString(&buf,1);
-        vUSBUARTPutString(&buf,1);
-        //vTaskDelay(1000);
+        vCanBusRead(0,buf);
+        vUSBUARTPutString((char*)buf,8);
+        
     }    
 }
 /* [] END OF FILE */
