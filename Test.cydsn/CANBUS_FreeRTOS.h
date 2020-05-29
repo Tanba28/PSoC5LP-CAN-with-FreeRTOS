@@ -18,15 +18,14 @@
 #include "task.h"
 #include "semphr.h"
     
-#define CAN_RX_MAILBOX_SHIFT(i) 0x01 << (i)
-    
-    
+#define CAN_RX_MAILBOX_SHIFT(i) 0x01 << (i) 
+
 /* Public Function *************************************************/
 void vCanBusStart();
 void vCanBusStop();
 void vCanBusEnable();
 void vCanBusDisable();
-void vCanBusSend(uint32_t id,uint8_t dataSize, uint8_t *data);
+void vCanBusTransmit(uint32_t id,uint8_t dataSize, uint8_t *data);
 void vCanBusRead(uint8_t mailboxNum, uint8_t *data );
 
 #endif

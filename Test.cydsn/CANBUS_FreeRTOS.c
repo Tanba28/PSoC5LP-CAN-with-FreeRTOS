@@ -13,15 +13,12 @@
 
 CY_ISR_PROTO(ISR_CAN);
 
-static QueueHandle_t xCanTxFifoQue;
 static QueueHandle_t xCanRxFifoQue[16];
 
-static SemaphoreHandle_t xCanTxBinarySemaphor;
 static SemaphoreHandle_t xCanRxBinarySemaphor;
 
 static void vCanBusSetup();
 static void vCanBusRxTask();
-static void vCanBusTxTask();
 
 void vCanBusStart(){
     CAN_Start();
@@ -40,6 +37,28 @@ void vCanBusDisable(){
     CAN_EN_Write(1);
 }
 
+void vCanBusRead(uint8_t mailboxNum, uint8_t *data){
+    xQueueReceive(xCanRxFifoQue[mailboxNum],data,portMAX_DELAY);
+    
+}
+
+void vCanBusTransmit(uint32_t id,uint8_t dataSize, uint8_t *data){
+    CAN_TX_MSG message;
+    CAN_DATA_BYTES_MSG messageData;
+    
+    message.id = id;
+    message.rtr = 0;
+    message.ide = 0;
+    message.dlc = dataSize;
+    message.irq = 1;
+    message.msg = &messageData;
+    
+    for(int i=0;i<dataSize;i++){
+        messageData.byte[i] = data[i];
+    }
+    CAN_SendMsg(&message);
+}
+
 CY_ISR(ISR_CAN){
     BaseType_t xHigherPriorityTaskWoken;
     
@@ -52,25 +71,17 @@ CY_ISR(ISR_CAN){
     portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
-static void vCanBusSetup(){
-    //割り込みの割り当て
-    //CyIntSetVector(CAN_ISR_NUMBER, ISR_CAN);
-    
-    //Txバッファ用のキュー初期化
-    xCanTxFifoQue = xQueueCreate(4,sizeof(CAN_TX_MSG));
-    
+static void vCanBusSetup(){  
     //Rxバッファ用のキュー初期化。メールボックスに1つにつきキュー1つ
     for(uint8_t i=0;i<CAN_NUMBER_OF_RX_MAILBOXES;i++){
         xCanRxFifoQue[i] = xQueueCreate(4,8);
     }  
     
-    xCanTxBinarySemaphor = xSemaphoreCreateBinary();//Txの書き込み干渉防止用
     xCanRxBinarySemaphor = xSemaphoreCreateBinary();//Rxの割り込みトリガ用
     
-    xSemaphoreGive(xCanTxBinarySemaphor);
-    //xSemaphoreGive(xCanRxBinarySemaphor);
+    xTaskCreate(vCanBusRxTask,"CAN_RX",100,NULL,3,NULL);
     
-    xTaskCreate(vCanBusRxTask,"CAN_RX",200,NULL,3,NULL);
+    //割り込みの割り当て
     CyIntSetVector(CAN_ISR_NUMBER, ISR_CAN);
 }
 
@@ -96,16 +107,5 @@ static void vCanBusRxTask(){
         }
     }
 }
-
-static void vCanBusTxTask();
-
-
-
-void vCanBusRead(uint8_t mailboxNum, uint8_t *data){
-    xQueueReceive(xCanRxFifoQue[mailboxNum],data,portMAX_DELAY);
-    
-}
-
-
 
 /* [] END OF FILE */
