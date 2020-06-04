@@ -37,8 +37,8 @@ int main(void)
     vCanBusEnable();
     xTaskCreate(vCanIsrReadTask,"test4",1000,NULL,3,NULL);
     xTaskCreate(vCanPerodicReadTask,"test4",1000,NULL,3,NULL);
-    xTaskCreate(vCanIsrTransmitTask,"test4",1000,NULL,3,NULL);
-    xTaskCreate(vCanPeriodicTransmitTask,"test4",1000,NULL,3,NULL);
+    //xTaskCreate(vCanIsrTransmitTask,"test4",1000,NULL,3,NULL);
+    //xTaskCreate(vCanPeriodicTransmitTask,"test4",1000,NULL,3,NULL);
     
     vTaskStartScheduler();
 
@@ -67,7 +67,7 @@ void vCanIsrReadTask(){
     for(;;){
         LED_1_Write(~LED_1_Read());
         vCanBusRead(0,buf);
-        sprintf(debug,"RX-ISR      MAILBOX:0 %c\r\n",buf[0]);
+        sprintf(debug,"RX-ISR      MAILBOX:0 %x %x %x %x %x %x\r\n",buf[0],buf[1],buf[2],buf[3],buf[4],buf[5]);
         vUSBUARTPutString(debug,strlen(debug));
     }
 }
